@@ -1,0 +1,102 @@
+/* Os tokens e as classes do design "Cérebro v3", como no <helmet> dele.
+   As cores dos departamentos usam o nome das pastas do wiki; o compartilhado
+   (que o design não tem) ganhou uma cor no mesmo tom das outras. */
+:root {
+  --background: oklch(0.135 0.008 268);
+  --foreground: oklch(0.94 0.006 85);
+  --muted-foreground: oklch(0.68 0.012 268);
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+  --area-empresa: oklch(0.82 0.04 250);
+  --area-produtos: oklch(0.72 0.15 290);
+  --area-clientes: oklch(0.8 0.12 215);
+  --area-vendas: oklch(0.69 0.19 22);
+  --area-marketing: oklch(0.72 0.17 340);
+  --area-operacoes: oklch(0.72 0.14 252);
+  --area-financas: oklch(0.79 0.15 160);
+  --area-administrativo: oklch(0.77 0.14 58);
+  --area-compartilhado: oklch(0.78 0.06 120);
+  --brain-routine: oklch(0.89 0.15 100);
+  --brain-app: oklch(0.86 0.1 185);
+  --ok: oklch(0.8 0.14 155);
+}
+body { margin: 0; background: oklch(0.135 0.008 268); }
+a { color: oklch(0.94 0.006 85); } a:hover { color: oklch(0.99 0.006 85); }
+.b-btn { transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease; }
+.b-btn:focus-visible, .b-range:focus-visible { outline: 2px solid oklch(0.94 0.006 85 / 60%); outline-offset: 2px; }
+.b-ghost:hover { background-color: oklch(1 0 0 / 8%) !important; color: oklch(0.97 0.006 85) !important; }
+.b-seg:hover { color: oklch(0.97 0.006 85) !important; }
+.b-row:hover { background-color: oklch(1 0 0 / 6%) !important; }
+.b-solid:hover { background-color: oklch(1 0 0 / 12%) !important; }
+.b-main:hover { background-color: oklch(0.99 0.006 85) !important; }
+.b-risk:hover { background-color: oklch(0.69 0.19 22 / 16%) !important; color: oklch(0.84 0.12 22) !important; }
+.b-danger:hover { background-color: oklch(0.66 0.2 22) !important; }
+.b-field:focus-within { border-color: oklch(1 0 0 / 28%) !important; }
+.b-field input::placeholder { color: oklch(0.7 0.012 268); }
+.b-range { -webkit-appearance: none; appearance: none; width: 100%; height: 22px; margin: 0; background: transparent; cursor: pointer; }
+.b-range::-webkit-slider-runnable-track { height: 4px; background: transparent; }
+.b-range::-moz-range-track { height: 4px; background: transparent; }
+.b-range::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; margin-top: -6px; border: 0; border-radius: 99px; background: oklch(0.94 0.006 85); box-shadow: 0 1px 3px oklch(0 0 0 / 50%); transition: transform 0.12s ease, box-shadow 0.12s ease; }
+.b-range::-moz-range-thumb { width: 16px; height: 16px; border: 0; border-radius: 99px; background: oklch(0.94 0.006 85); box-shadow: 0 1px 3px oklch(0 0 0 / 50%); transition: transform 0.12s ease, box-shadow 0.12s ease; }
+.b-range:hover::-webkit-slider-thumb { transform: scale(1.12); }
+.b-range:hover::-moz-range-thumb { transform: scale(1.12); }
+.b-range:active::-webkit-slider-thumb { transform: scale(1.18); box-shadow: 0 0 0 6px oklch(0.94 0.006 85 / 18%), 0 1px 3px oklch(0 0 0 / 50%); }
+.b-range:active::-moz-range-thumb { transform: scale(1.18); box-shadow: 0 0 0 6px oklch(0.94 0.006 85 / 18%), 0 1px 3px oklch(0 0 0 / 50%); }
+.b-peeking { scrollbar-color: transparent transparent !important; }
+.b-scroll { scrollbar-width: thin; scrollbar-color: oklch(1 0 0 / 16%) transparent; }
+@keyframes b-pop { from { opacity: 0; transform: translateY(-6px) scale(0.98); } }
+@keyframes b-rise { from { opacity: 0; transform: translateY(8px); } }
+@keyframes b-slide { from { opacity: 0; transform: translateX(28px); } }
+@keyframes b-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.8); } }
+.b-live { animation: b-pulse 1.6s ease-in-out infinite; }
+.b-btn:disabled { cursor: default !important; opacity: 0.4; }
+.b-ghost:disabled:hover, .b-risk:disabled:hover { background-color: transparent !important; color: oklch(0.74 0.012 268) !important; }
+.b-solid:disabled:hover { background-color: oklch(1 0 0 / 6%) !important; }
+.b-main:disabled:hover { background-color: oklch(0.94 0.006 85) !important; }
+.b-tool { transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease; }
+.b-tool:hover { background-color: oklch(1 0 0 / 12%) !important; color: oklch(0.99 0.006 85) !important; transform: translateY(-1px); }
+.b-tool .b-tip { opacity: 0; transform: translate(-50%, 4px); transition: opacity 0.12s ease, transform 0.12s ease; }
+.b-tool:hover .b-tip, .b-tool:focus-visible .b-tip { opacity: 1; transform: translate(-50%, 0); }
+.b-fav .b-go { opacity: 0; }
+.b-fav:hover .b-go, .b-fav:focus-visible .b-go { opacity: 1; }
+.b-fav:hover .b-dept, .b-fav:focus-visible .b-dept { opacity: 0; }
+.b-note .b-quick { opacity: 0; }
+.b-note:hover .b-quick, .b-note:focus-within .b-quick { opacity: 1; }
+.b-note:hover .b-chip, .b-note:focus-within .b-chip { opacity: 0; }
+.b-nav:hover { background-color: oklch(1 0 0 / 6%) !important; color: oklch(0.97 0.006 85) !important; }
+.b-input { transition: border-color 0.15s ease, background-color 0.15s ease; }
+.b-input:focus { outline: none; border-color: oklch(1 0 0 / 28%) !important; background-color: oklch(1 0 0 / 6%) !important; }
+.b-input::placeholder, .b-area::placeholder { color: oklch(0.62 0.012 268); }
+.b-head::placeholder { color: oklch(0.52 0.012 268); }
+.b-area:focus, .b-head:focus { outline: none; }
+@keyframes b-fade { from { opacity: 0; } }
+@keyframes b-dialog { from { opacity: 0; transform: translateY(10px) scale(0.985); } }
+.b-scrim { animation: b-fade 0.18s ease-out; }
+.b-phone { display: none !important; }
+@media (max-width: 1399px) { .b-title { position: static !important; transform: none !important; order: 3; flex: 1 0 100%; } .b-left { top: 160px !important; } }
+@media (max-width: 1180px) { .b-left, .b-right { width: 264px !important; } }
+@media (max-width: 900px) { .b-side, .b-right { display: none !important; } .b-phone { display: grid !important; } }
+@media (max-width: 799px) { .b-left { top: 214px !important; } }
+@media (max-width: 760px) { .b-set { flex-direction: column !important; } .b-setnav { width: auto !important; flex-direction: row !important; overflow-x: auto; border-right: 0 !important; border-bottom: 1px solid oklch(1 0 0 / 8%); } .b-setnav-title { display: none !important; } }
+@media (max-width: 640px) { .b-word, .b-kbd { display: none !important; } .b-left { top: auto !important; bottom: 92px !important; } .b-card { max-height: 46vh !important; } .b-tool { min-width: 40px !important; height: 40px !important; } }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+html, body, #root { height: 100%; }
+/* O texto da página no leitor, na tipografia do design. */
+.b-prose { font-size: 14px; line-height: 1.6; color: oklch(0.82 0.01 268); overflow-wrap: anywhere; }
+.b-prose > :first-child { margin-top: 0; }
+.b-prose h1, .b-prose h2, .b-prose h3, .b-prose h4 { color: oklch(0.94 0.006 85); font-weight: 600; line-height: 1.3; margin: 1.6em 0 0.5em; }
+.b-prose h1 { font-size: 18px; }
+.b-prose h2 { font-size: 16px; }
+.b-prose h3, .b-prose h4 { font-size: 14px; }
+.b-prose p, .b-prose ul, .b-prose ol, .b-prose blockquote, .b-prose table, .b-prose pre { margin: 0 0 0.9em; }
+.b-prose ul, .b-prose ol { padding-left: 1.3em; }
+.b-prose li { margin: 0.2em 0; }
+.b-prose a { color: oklch(0.94 0.006 85); text-decoration-color: oklch(1 0 0 / 30%); text-underline-offset: 2px; }
+.b-prose strong { color: oklch(0.94 0.006 85); font-weight: 600; }
+.b-prose code { font-family: var(--font-mono); font-size: 12.5px; padding: 1px 5px; border-radius: 5px; background: oklch(1 0 0 / 7%); }
+.b-prose pre { padding: 12px 14px; border-radius: 10px; background: oklch(1 0 0 / 5%); overflow-x: auto; }
+.b-prose pre code { padding: 0; background: none; }
+.b-prose blockquote { padding-left: 12px; border-left: 2px solid oklch(1 0 0 / 14%); color: oklch(0.74 0.012 268); }
+.b-prose table { width: 100%; border-collapse: collapse; font-size: 13px; display: block; overflow-x: auto; }
+.b-prose th, .b-prose td { padding: 6px 8px; border-bottom: 1px solid oklch(1 0 0 / 8%); text-align: left; vertical-align: top; }
+.b-prose th { color: oklch(0.94 0.006 85); font-weight: 500; }
+.b-prose hr { border: 0; height: 1px; background: oklch(1 0 0 / 8%); margin: 1.4em 0; }
