@@ -1,3 +1,4 @@
 node_modules
 dist
 sessoes
+vite.config.ts.timestamp-*

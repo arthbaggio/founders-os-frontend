@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { ICONS } from "../brain/icons";
+import { areaIcon } from "../brain/areaStyle";
 
 // Os ícones do design: 24×24, traço arredondado.
 export function Svg({ size = 15, weight = 1.75, style, children }: { size?: number; weight?: number; style?: React.CSSProperties; children: ReactNode }) {
@@ -25,7 +26,7 @@ export function Svg({ size = 15, weight = 1.75, style, children }: { size?: numb
 export function KindIcon({ name }: { name: string }) {
   return (
     <Svg size={17}>
-      <path d={ICONS[name] ?? ICONS.folder}></path>
+      <path d={areaIcon(name)}></path>
     </Svg>
   );
 }

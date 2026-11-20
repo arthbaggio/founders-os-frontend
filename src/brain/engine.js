@@ -3,6 +3,7 @@
 // Mudanças em relação ao design: a empresa é a pasta `empresa`, os ícones vêm de
 // ./icons, e nas vistas soltas o arrasto usa as molas de ./physics (d3-force).
 import { ICONS } from "./icons";
+import { areaAlias } from "./areaStyle";
 import { startSprings } from "./physics";
 
 const TAU = Math.PI * 2;
@@ -674,7 +675,7 @@ function startBrain(canvas, tree, hooks, extras, resume = null) {
   };
   const shapes = Object.fromEntries(Object.entries(ICONS).map(([key, d]) => [key, new Path2D(d)]));
   const icon = (key, x, y, size, color) => {
-    const shape = shapes[key] ?? shapes.folder;
+    const shape = shapes[key] ?? shapes[areaAlias(key) ?? ""] ?? shapes.folder;
     ctx.save();
     ctx.translate(x - size / 2, y - size / 2);
     ctx.scale(size / 24, size / 24);

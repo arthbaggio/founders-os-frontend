@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { BrainTree } from "../server/scan";
 import { Brain } from "./Brain";
 import { css } from "./css";
+import { Onboarding } from "./components/Onboarding";
+import { paintAreas } from "./brain/areaStyle";
 
 export function App() {
   const [tree, setTree] = useState<BrainTree | null>(null);
@@ -22,6 +24,15 @@ export function App() {
       .catch(() => setError(true));
   }, []);
 
+  // Sem cérebro (nenhuma página e nenhuma skill), o app abre a criação guiada.
+  const [setup, setSetup] = useState<{ brain: string; empty: boolean } | null>(null);
+  useEffect(() => {
+    fetch("/api/brain/status", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setSetup(data ? { brain: data.brain, empty: data.empty } : { brain: "", empty: false }))
+      .catch(() => setSetup({ brain: "", empty: false }));
+  }, []);
+
   useEffect(() => {
     fetchTree();
     const hot = import.meta.hot;
@@ -33,7 +44,18 @@ export function App() {
     };
   }, [fetchTree]);
 
-  if (!tree)
+  if (setup?.empty)
+    return (
+      <Onboarding
+        brain={setup.brain}
+        onDone={() => {
+          setSetup({ ...setup, empty: false });
+          last.current = "";
+          fetchTree();
+        }}
+      />
+    );
+  if (!tree || !setup)
     return (
       <div
         style={css(
@@ -43,5 +65,7 @@ export function App() {
         {error ? "Não deu para ler o cérebro. Confira a pasta em BRAIN_DIR." : ""}
       </div>
     );
-  return <Brain tree={tree.areas} apps={tree.apps} />;
+  // Pastas com nomes fora do padrão ganham cor antes de o mapa ler as cores.
+  paintAreas(tree.areas.map((area) => area.path));
+  return <Brain tree={tree.areas} apps={tree.apps} owners={(tree as BrainTree & { owners?: Record<string, string> }).owners} />;
 }

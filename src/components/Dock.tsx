@@ -14,9 +14,9 @@ export function ToolIcon({ tool, size }: { tool: Tool; size: number }) {
   );
 }
 
-type Props = { tools: Tool[]; names: boolean; edit: () => void; manager: () => void; note: () => void };
+type Props = { tools: Tool[]; names: boolean; edit: () => void; manager: () => void; note: () => void; agents: () => void; mission: () => void };
 
-export function Dock({ tools, names, edit, manager, note }: Props) {
+export function Dock({ tools, names, edit, manager, note, agents, mission }: Props) {
   return (
     <nav
       aria-label="Ferramentas"
@@ -81,6 +81,28 @@ export function Dock({ tools, names, edit, manager, note }: Props) {
       >
         <Svg size={16}>
           <path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.4 2.6a2.1 2.1 0 1 1 3 3L12 15l-4 1 1-4z"></path>
+        </Svg>
+      </button>
+      <button
+        className="b-btn b-ghost"
+        aria-label="Mission Control"
+        title="Mission Control"
+        onClick={mission}
+        style={css("display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 11px; background: transparent; color: oklch(0.86 0.008 268); cursor: pointer")}
+      >
+        <Svg size={16}>
+          <path d="M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z"></path>
+        </Svg>
+      </button>
+      <button
+        className="b-btn b-ghost"
+        aria-label="Agentes"
+        title="Agentes"
+        onClick={agents}
+        style={css("display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 11px; background: transparent; color: oklch(0.86 0.008 268); cursor: pointer")}
+      >
+        <Svg size={16}>
+          <path d="M12 8V4H8M5 8h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2zM2 14h2M20 14h2M15 13v2M9 13v2"></path>
         </Svg>
       </button>
       <button

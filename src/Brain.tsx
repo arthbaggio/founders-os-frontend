@@ -14,6 +14,8 @@ import { Reader, type Page } from "./components/Reader";
 import { Clock } from "./components/Clock";
 import { Dock } from "./components/Dock";
 import { Manager, SkillsWidget } from "./components/Skills";
+import { AgentChat } from "./components/AgentChat";
+import { MissionControl } from "./components/MissionControl";
 import { NoteDialog, NotesWidget, blank, busy, titled, type Note } from "./components/Notes";
 import { Settings, type Home, type MapOpts, type Tab } from "./components/Settings";
 import { CLOCK, EFFORTS, MAX_FAVS, MAX_TOOLS, MIN_TOOLS, MODELS, NEXT, SHOW, TOOLS, catalog, pad, when, type Runnable } from "./home";
@@ -21,7 +23,8 @@ import { load, save } from "./storage";
 
 const CENTER = "empresa";
 
-type Props = { tree: BrainNode[]; apps: BrainApp[] };
+// owners: o agente dono de cada departamento, do time desenhado (pasta → nome).
+type Props = { tree: BrainNode[]; apps: BrainApp[]; owners?: Record<string, string> };
 
 type State = MapOpts & {
   focus: string | null;
@@ -49,6 +52,14 @@ type State = MapOpts & {
   settings: Tab | null;
   lastTab: Tab;
   manager: "skills" | "routines" | null;
+  // A gaveta dos agentes (OpenBot), que divide o lado direito com a leitura e o Gerenciar.
+  agents: boolean;
+  // A conversa com os agentes: null fechada; "" ou a pasta da área para abrir no agente dela.
+  chat: string | null;
+  // A conversa abre com a configuração ao lado (vinda do Mission Control).
+  chatSetup: boolean;
+  // O Mission Control: o time inteiro numa tela.
+  mission: boolean;
   // As sessões do Claude abertas daqui, as que rodam e as que terminaram.
   runs: Run[];
   notes: Note[];
@@ -205,6 +216,10 @@ export class Brain extends Component<Props, State> {
     settings: null,
     lastTab: "home",
     manager: null,
+    agents: false,
+    chat: null,
+    chatSetup: false,
+    mission: false,
     runs: [],
     notes: [],
     note: null,
@@ -351,7 +366,7 @@ export class Brain extends Component<Props, State> {
     const s = this.state;
     const width = this.canvas ? this.canvas.clientWidth : 0;
     const foot = s.home.show.tools ? (s.home.toolNames ? 98 : 88) : 32;
-    const panel = s.page ? 480 : s.manager ? 440 : 0;
+    const panel = s.page ? 480 : s.manager || s.agents ? 440 : 0;
     const wide = panel > 0 && width > 900;
     const left = wide && s.home.show.skills ? (width <= 1180 ? 264 : 308) + 32 : 0;
     const right = wide ? panel : 0;
@@ -384,7 +399,7 @@ export class Brain extends Component<Props, State> {
 
   // A leitura e o painel Gerenciar dividem a gaveta da direita: um fecha o outro.
   read(info: Info | Page) {
-    this.setState({ page: { ...info }, manager: null, settings: null });
+    this.setState({ page: { ...info }, manager: null, agents: false, settings: null });
   }
 
   // Abre o arquivo (ou a pasta) no computador, com o programa padrão.
@@ -736,7 +751,10 @@ export class Brain extends Component<Props, State> {
       this.setState({ q: "", hits: [] });
     };
     const go = (path: string) => brain && brain.go(path);
-    const manage = (tab: "skills" | "routines") => this.setState({ manager: tab, page: null, settings: null });
+    const manage = (tab: "skills" | "routines") => this.setState({ manager: tab, agents: false, page: null, settings: null });
+    const openAgents = () => this.setState({ chat: "", chatSetup: false, mission: false, agents: false, manager: null, page: null, settings: null });
+    const openMission = () => this.setState({ mission: true, chat: null, agents: false, manager: null, page: null, settings: null });
+    const openChat = (area: string) => this.setState({ chat: area, agents: false, manager: null, page: null, settings: null });
 
     // --- A barra: as vistas ---
     const tab = (key: View) => {
@@ -761,6 +779,7 @@ export class Brain extends Component<Props, State> {
       const rows: { key: string; value: string; face: string; size: string }[] = [];
       const row = (key: string, value: string, face = "inherit", size = "inherit") => rows.push({ key, value, face, size });
       if (!root && info.kind !== "app") row("Departamento", info.areaLabel);
+      if (root) row("Agente", this.props.owners?.[info.path] ?? "Sem agente ainda (Agentes › Desenhar)");
       if (info.note) row("Agenda", info.note);
       if (info.tag) row("Conexão", info.tag);
       if (info.folder) row("Conteúdo", plural(info.pages, "página", "páginas"));
@@ -817,6 +836,14 @@ export class Brain extends Component<Props, State> {
             {root && graph && (
               <button className="b-btn b-main" onClick={() => brain && brain.focus(info.path)} style={css(MAIN)}>
                 Abrir
+              </button>
+            )}
+            {root && this.props.owners?.[info.path] && (
+              <button className="b-btn b-solid" onClick={() => openChat(info.path)} style={css(SOLID)}>
+                <Svg size={14}>
+                  <path d="M4 5h16v11H9l-5 4z"></path>
+                </Svg>
+                Conversar
               </button>
             )}
             {(info.kind === "skill" || info.kind === "routine") && (
@@ -895,7 +922,7 @@ export class Brain extends Component<Props, State> {
       ? {
           label: over.label,
           color: tint(over),
-          sub: over.kind === "app" ? over.desc : [kinds[over.kind], over.kind === "dept" || over.kind === "core" ? "" : over.areaLabel, over.note].filter(Boolean).join(" · "),
+          sub: over.kind === "app" ? over.desc : [kinds[over.kind], over.kind === "dept" || over.kind === "core" ? (this.props.owners?.[over.path] ? "agente " + this.props.owners[over.path] : "") : over.areaLabel, over.note].filter(Boolean).join(" · "),
           hint: over.folder && over.kind === "folder" ? plural(over.pages, "página", "páginas") + " · clique para " + (over.open ? "recolher" : "expandir") : "Clique para ver os detalhes",
         }
       : { label: "", color: "transparent", sub: "", hint: "" };
@@ -942,6 +969,9 @@ export class Brain extends Component<Props, State> {
         else if (s.note) this.closeNote();
         else if (s.settings) this.setState({ settings: null });
         else if (s.q) this.setState({ q: "", hits: [] });
+        else if (s.mission) this.setState({ mission: false });
+        else if (s.chat !== null) this.setState({ chat: null });
+        else if (s.agents) this.setState({ agents: false });
         else if (s.manager) this.setState({ manager: null });
         else if (s.page) this.setState({ page: null });
         else if (brain) brain.escape();
@@ -1337,7 +1367,7 @@ export class Brain extends Component<Props, State> {
           </div>
         )}
 
-        {show.tools && <Dock tools={s.home.tools} names={s.home.toolNames} edit={() => this.openSettings("tools")} manager={() => manage("skills")} note={this.newNote} />}
+        {show.tools && <Dock tools={s.home.tools} names={s.home.toolNames} edit={() => this.openSettings("tools")} manager={() => manage("skills")} note={this.newNote} agents={openAgents} mission={openMission} />}
 
         <div
           ref={this.bindTip}
@@ -1365,6 +1395,38 @@ export class Brain extends Component<Props, State> {
             copy={() => this.copy(s.page!.path)}
             close={() => this.setState({ page: null })}
             follow={this.follow}
+          />
+        )}
+
+
+        {s.mission && (
+          <MissionControl
+            close={() => this.setState({ mission: false })}
+            openAgent={(area) => this.setState({ mission: false, chat: area, chatSetup: false })}
+            setup={() => this.setState({ mission: false, chat: "", chatSetup: true })}
+            openPage={(path) => {
+              this.setState({ mission: false });
+              this.follow(path);
+            }}
+          />
+        )}
+
+        {s.chat !== null && (
+          <AgentChat
+            start={s.chat || null}
+            configure={s.chatSetup}
+            close={() => this.setState({ chat: null })}
+            // Uma página citada pelo agente abre no leitor, com o mapa indo até ela.
+            openPage={(path) => {
+              this.setState({ chat: null });
+              this.follow(path);
+            }}
+            goArea={(area) => {
+              this.setState({ chat: null });
+              const brain = this.brain;
+              if (brain) brain.fly(area);
+            }}
+            noted={() => this.fetchNotes()}
           />
         )}
 
