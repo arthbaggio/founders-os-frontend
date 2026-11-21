@@ -10,6 +10,10 @@ const results = resolve(__dirname, "sessoes");
 
 export default defineConfig({
   plugins: [react(), brainApi(brain, results)],
-  server: { port: 5178, strictPort: false },
+  // Os apps do Espaço moram em sessoes/; sem isso, cada app salvo recarregava a página.
+  server: { port: 5178, strictPort: false, watch: { ignored: ["**/sessoes/**"] } },
+  // O Bloub (os mascotes do OpenBot) acha as texturas pelo próprio caminho
+  // (new URL(..., import.meta.url)); reempacotado pelo Vite, perde as imagens.
+  optimizeDeps: { exclude: ["@norbert_bodziony/bloub"] },
   preview: { port: 5179 },
 });

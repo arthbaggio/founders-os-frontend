@@ -2,7 +2,7 @@
 // cérebro: o app acompanha o que ela vai fazendo pelo stream-json e, no fim,
 // guarda a resposta em sessoes/, na pasta do app, fora do cérebro.
 import { spawn, type ChildProcess } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { isAbsolute, join, relative, sep } from "node:path";
 
@@ -50,11 +50,21 @@ const BASE = ["--permission-prompts", "none"];
 const FECHADO = ["--strict-mcp-config"];
 // Os conectores (Notion, ClickUp, etc.) moram na config do app Claude Desktop, que
 // o `claude -p` não lê sozinho. O rodar aponta para ela, então o que você liga lá vale aqui.
-export const CONECTORES = join(homedir(), "Library/Application Support/Claude/claude_desktop_config.json");
+// O arquivo fica num lugar diferente em cada sistema; sem o Claude Desktop, o rodar segue sem ele.
+const DESKTOP_CONFIG =
+  process.platform === "win32"
+    ? join(process.env.APPDATA ?? join(homedir(), "AppData", "Roaming"), "Claude", "claude_desktop_config.json")
+    : process.platform === "darwin"
+      ? join(homedir(), "Library", "Application Support", "Claude", "claude_desktop_config.json")
+      : join(process.env.XDG_CONFIG_HOME ?? join(homedir(), ".config"), "Claude", "claude_desktop_config.json");
+export const CONECTORES = DESKTOP_CONFIG;
+const conectores = () => (existsSync(CONECTORES) ? ["--mcp-config", CONECTORES] : []);
 export const ACCESS = {
   // Skills e rotinas fazem trabalho de verdade: editam o cérebro, menos o wiki/,
-  // que só muda com o aceite do Arthur (CLAUDE.md). O wiki muda pelo Processar.
-  rodar: ["--mcp-config", CONECTORES, "--permission-mode", "bypassPermissions", "--disallowedTools", "Edit(wiki/**)"],
+  // que só muda com o aceite do dono (CLAUDE.md). O wiki muda pelo Processar.
+  get rodar() {
+    return [...conectores(), "--permission-mode", "bypassPermissions", "--disallowedTools", "Edit(wiki/**)"];
+  },
   // A proposta de uma nota só lê.
   propor: [...FECHADO, "--tools", "Read,Glob,Grep", "--permission-mode", "dontAsk"],
   // Aprovada, a proposta grava, e só dentro do wiki/.
