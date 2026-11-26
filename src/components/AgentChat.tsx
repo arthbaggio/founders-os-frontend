@@ -20,6 +20,8 @@ type Bot = { connected: boolean; reason: "off" | "no-agents" | "error" | null };
 type Summary = Record<string, { text: string; role: string; at: string; working: boolean } | null>;
 
 const SEEN = "fos-chat-visto";
+// Lida = a última vista é desta hora ou mais nova.
+const readAt = (seenAt: string | undefined, at: string) => Boolean(seenAt) && (seenAt === at || Date.parse(seenAt!) >= Date.parse(at));
 const LAST = "fos-chat-agente";
 const EMPTY: Chat = { items: [], working: false, turnStarted: null, source: "openbot", pending: null };
 
@@ -55,6 +57,8 @@ const dayLabel = (iso: string) => {
   return date.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" });
 };
 const plain = (text: string) => text.replace(/```[\s\S]*?```/g, " ").replace(/[#*_`>|]/g, "").replace(/\s+/g, " ").trim();
+// O SKILL.md da skill, no caminho que o mapa usa: o leitor abre a skill e o mapa vai até ela.
+const skillPath = (skill: Skill) => `../.claude/skills/${skill.slug}/SKILL.md`;
 const skillTask = (skill: Skill) => `Rode a skill \`${skill.slug}\` e siga o passo a passo dela. No fim, me diga em poucas linhas o que fez.`;
 const noteId = (t: number) => {
   const d = new Date(t);
@@ -201,9 +205,13 @@ export function AgentChat({ start, configure = false, close, openPage, goArea, n
   }, [chat.items.length, chat.items[chat.items.length - 1]?.text, chat.working, chat.pending]);
 
   // A conversa aberta conta como lida.
-  const lastAt = chat.items[chat.items.length - 1]?.at;
+  // O resumo da lista e a conversa nem sempre trazem a mesma hora para a última mensagem
+  // (a lista conta a última do agente; a conversa, o último evento): guarda a mais nova.
+  const chatAt = chat.items[chat.items.length - 1]?.at;
+  const listAt = current ? summary[current]?.at : undefined;
+  const lastAt = !chatAt ? listAt : !listAt ? chatAt : Date.parse(listAt) > Date.parse(chatAt) ? listAt : chatAt;
   useEffect(() => {
-    if (!current || !lastAt || seen[current] === lastAt) return;
+    if (!current || !lastAt || readAt(seen[current], lastAt)) return;
     const next = { ...seen, [current]: lastAt };
     setSeen(next);
     try {
@@ -372,7 +380,7 @@ export function AgentChat({ start, configure = false, close, openPage, goArea, n
             {agents === null && <div style={css("padding: 14px; font-size: 12.5px; color: oklch(0.6 0.012 268)")}>Carregando…</div>}
             {list.map(({ one, info }) => {
               const on = one.key === current;
-              const unread = Boolean(info && info.role === "agente" && !info.working && info.text && seen[one.key] !== info.at && !on);
+              const unread = Boolean(info && info.role === "agente" && !info.working && info.text && !readAt(seen[one.key], info.at) && !on);
               const preview = !one.openbot ? "Fora do OpenBot" : info?.working ? "Trabalhando…" : info ? (info.role === "voce" ? "Você: " : "") + plain(info.text) : one.mission || "Sem conversa ainda";
               return (
                 <button
@@ -665,14 +673,14 @@ export function AgentChat({ start, configure = false, close, openPage, goArea, n
             {agent.routines.length > 0 && (
               <Section title="Rotinas">
                 {agent.routines.map((one) => (
-                  <Line key={one.slug} label={one.label} hint={one.schedule ?? ""} disabled={!live || chat.working} onClick={() => send(skillTask(one))} />
+                  <Line key={one.slug} label={one.label} hint={one.schedule ?? ""} disabled={!live || chat.working} open={() => openPage(skillPath(one))} run={() => send(skillTask(one))} />
                 ))}
               </Section>
             )}
             <Section title={`Skills · ${agent.skills.length}`}>
               {agent.skills.length === 0 && <div style={css("font-size: 12.5px; color: oklch(0.56 0.012 268)")}>Nenhuma skill nesta área ainda.</div>}
               {agent.skills.map((one) => (
-                <Line key={one.slug} label={one.label} disabled={!live || chat.working} onClick={() => send(skillTask(one))} />
+                <Line key={one.slug} label={one.label} disabled={!live || chat.working} open={() => openPage(skillPath(one))} run={() => send(skillTask(one))} />
               ))}
             </Section>
           </aside>
@@ -933,18 +941,32 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Line({ label, hint, disabled, onClick }: { label: string; hint?: string; disabled: boolean; onClick: () => void }) {
+// Uma skill ou rotina do agente: clicar abre para ler; só o botão Rodar pede ao agente para rodar.
+function Line({ label, hint, disabled, open, run }: { label: string; hint?: string; disabled: boolean; open: () => void; run: () => void }) {
   return (
-    <button
-      className="b-btn c-row"
-      disabled={disabled}
-      title={"Pedir para rodar “" + label + "”"}
-      onClick={onClick}
-      style={css("display: flex; align-items: center; gap: 8px; width: calc(100% + 16px); padding: 6px 8px; margin: 0 -8px; border: 0; border-radius: 7px; background: transparent; text-align: left; font: inherit; font-size: 12.5px; color: oklch(0.86 0.008 268); cursor: pointer")}
-    >
-      <span style={css("flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap")}>{label}</span>
-      {hint && <span style={css("flex: none; font-size: 11px; color: oklch(0.52 0.012 268)")}>{hint}</span>}
-    </button>
+    <div className="c-line" style={css("display: flex; align-items: center; gap: 4px; width: calc(100% + 16px); margin: 0 -8px; border-radius: 7px")}>
+      <button
+        className="b-btn c-row"
+        title={"Abrir “" + label + "”"}
+        onClick={open}
+        style={css("flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 0; border-radius: 7px; background: transparent; text-align: left; font: inherit; font-size: 12.5px; color: oklch(0.86 0.008 268); cursor: pointer")}
+      >
+        <span style={css("flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap")}>{label}</span>
+        {hint && <span style={css("flex: none; font-size: 11px; color: oklch(0.52 0.012 268)")}>{hint}</span>}
+      </button>
+      <button
+        className="b-btn c-act"
+        aria-label={"Rodar “" + label + "”"}
+        title={disabled ? "O agente está ocupado ou fora do OpenBot" : "Rodar “" + label + "”"}
+        disabled={disabled}
+        onClick={run}
+        style={css(`flex: none; display: grid; place-items: center; width: 26px; height: 26px; border: 0; border-radius: 7px; background: transparent; color: oklch(0.58 0.012 268); cursor: ${disabled ? "default" : "pointer"}; opacity: ${disabled ? 0.4 : 1}`)}
+      >
+        <Svg size={13}>
+          <path d="M7 4.5v15l12.5-7.5z"></path>
+        </Svg>
+      </button>
+    </div>
   );
 }
 
