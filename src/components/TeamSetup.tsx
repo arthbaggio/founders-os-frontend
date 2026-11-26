@@ -17,7 +17,9 @@ type Setup = {
   eggbot?: { id: string; name: string } | null;
 };
 type Team = {
-  status: "nenhum" | "rodando" | "pronto" | "falhou";
+  status: "nenhum" | "importar" | "rodando" | "pronto" | "falhou";
+  mode?: "time" | "conector";
+  file?: string | null;
   builder: { id: string; name: string } | null;
   answer: string;
   report: { criados: string[]; skills: number; rotinas: number; conector: boolean; falhas: string[] } | null;
@@ -198,25 +200,45 @@ export function TeamSetup({ back, compact = false }: { back: () => void; compact
       title: "Time montado no OpenBot",
       detail: !designed
         ? "Primeiro desenhe o time."
-        : team?.status === "rodando"
-          ? `${team.builder?.name ?? "Um agente"} está criando os agentes, as skills, as rotinas e o conector. Leva alguns minutos.`
+        : team?.status === "importar"
+          ? "O OpenBot ainda não tem agentes, então gerei o arquivo do time. Importe no OpenBot e eu termino o resto sozinho."
+          : team?.status === "rodando"
+          ? team.mode === "conector"
+            ? `Time importado. ${team.builder?.name ?? "Um agente"} está ligando o conector do cérebro.`
+            : `${team.builder?.name ?? "Um agente"} está criando os agentes, as skills, as rotinas e o conector. Leva alguns minutos.`
           : team?.status === "pronto"
-            ? team.report
+            ? team.mode === "conector"
+              ? team.report?.conector
+                ? "Time importado e conector do cérebro ligado."
+                : "Time importado. O conector não ligou: clique em Refazer."
+              : team.report
               ? `${plural(team.report.criados.length, "agente", "agentes")}, ${plural(team.report.skills, "skill", "skills")}, ${plural(team.report.rotinas, "rotina", "rotinas")}${team.report.conector ? " e o conector" : ""}.`
               : "Pronto."
             : team?.status === "falhou"
               ? "A última montagem não terminou. Tente de novo."
-              : "Um clique: um agente do OpenBot cria o time inteiro, instala as skills e as rotinas e liga o conector.",
+              : "Um clique cria o time inteiro, com as skills, as rotinas e o conector. Não precisa ter nenhum agente no OpenBot.",
       action:
         designed && setup.localScripts && team?.status !== "rodando" ? (
           <Button busy={busy === "team"} ghost={team?.status === "pronto"} onClick={() => act("team", "/api/openbot/team", {})}>
-            {team?.status === "pronto" ? "Refazer" : "Configurar tudo"}
+            {team?.status === "pronto" ? "Refazer" : team?.status === "importar" ? "Gerar de novo" : "Configurar tudo"}
           </Button>
         ) : team?.status === "rodando" ? (
           <span className="c-spin"></span>
         ) : null,
       extra: (
         <>
+          {team?.status === "importar" && (
+            <Callout title="Importe o time no OpenBot">
+              <ol style={css("margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; white-space: normal")}>
+                <li>No OpenBot, abra Server settings › Import.</li>
+                <li>
+                  Escolha <code style={css("font-size: 11px; word-break: break-all")}>{(team.file ?? "").split(/[\\/]/).pop()}</code>, em Downloads (a pasta já abriu).
+                </li>
+                <li>Confirme a importação.</li>
+              </ol>
+              <div style={css("margin-top: 8px; color: oklch(0.66 0.012 268)")}>Quando os agentes aparecerem, esta etapa continua sozinha.</div>
+            </Callout>
+          )}
           {team?.pending?.approvals?.map((one: any) => (
             <Callout key={one.requestId} title="O OpenBot pede aprovação">
               {one.reason || one.kind}

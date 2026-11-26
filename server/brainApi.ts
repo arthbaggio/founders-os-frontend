@@ -15,7 +15,7 @@ import { brainIsEmpty, builderStore } from "./brainBuilder";
 import { exportPlan } from "../skills/levar-para-openbot/scripts/openbot-import.mjs";
 import { closeOpenBot, connectorInfo, openOpenBotLink, isRunning, launchOpenBot, localScriptsByDefault, openbotLogo, setupState, writeLocalScriptsDefault } from "./openbotSetup";
 import { agentForArea, answerPrompt, EGGBOT_INSTALL, findEggbot, deliveryOf, listServers, openbotState, pendingOf, respondApproval, pickServerFor, selectServer, selectedServer, sendToAgent, serverChosen } from "./openbot";
-import { MAX_ATTEMPTS, pickBuilder, teamStore, writeTeamOrder } from "./openbotTeam";
+import { MAX_ATTEMPTS, connectorOrder, pickBuilder, teamStore, writeTeamOrder } from "./openbotTeam";
 import { NOTES_DIR, noteStore } from "./notes";
 import { DONE as CHAT_DONE, chatStore } from "./agentChat";
 import { historyAvailable, readAvatars, readHistory, readMission } from "./openbotHistory";
@@ -469,18 +469,31 @@ export function brainApi(brainDir: string, resultsDir: string): Plugin {
           if (!localScriptsByDefault()) return send(res, 409, { error: "Ligue o Local scripts em todos os agentes primeiro.", needsScripts: true });
           const bot = await openbotState();
           const builder = bot.connected ? pickBuilder(bot.agents, plan) : null;
-          if (!builder)
-            return send(res, 409, { error: "O OpenBot ainda não tem nenhum agente neste servidor. Crie um agente qualquer no OpenBot (ele pede isso na primeira vez) e clique de novo." });
+          if (!builder) {
+            // Nenhum agente ainda: o importador oficial cria o time; o app termina depois.
+            const info = exportPlan(brain, plan);
+            return send(res, 200, team.waitImport(info.file));
+          }
           const connector = connectorInfo(appRoot, brain);
           const order = writeTeamOrder(brain, plan, { command: connector.command, args: connector.args });
           const out = await sendToAgent(builder.id, order.message, "fos-time-" + Date.now());
           if (out.status !== 202) return send(res, out.status || 502, out.body ?? { error: "O OpenBot recusou o pedido" });
-          return send(res, 200, team.start(builder, out.body?.deliveries?.[0]?.id ?? null));
+          return send(res, 200, team.start(builder, out.body?.deliveries?.[0]?.id ?? null, false, "time"));
         }
         // Como está a montagem: a entrega do agente e o que espera uma pessoa (aprovações e perguntas).
         if (url.pathname === "/api/openbot/team" && req.method === "GET") {
           let state = team.state();
           let pending: any = { prompts: [], approvals: [], browserTakeovers: [] };
+          if (state.status === "importar") {
+            // Os agentes importados apareceram: um deles liga o conector, e a montagem termina.
+            const bot = await openbotState();
+            const plan = fichaPlan() as any;
+            const builder = bot.connected && plan ? pickBuilder(bot.agents, plan) : null;
+            if (builder) {
+              const out = await sendToAgent(builder.id, connectorOrder(connectorInfo(appRoot, brain)), "fos-conector-" + Date.now());
+              state = team.start(builder, out.status === 202 ? (out.body?.deliveries?.[0]?.id ?? null) : null, false, "conector");
+            }
+          }
           if (state.status === "rodando" && state.builder && state.deliveryId) {
             const out = await deliveryOf(state.builder.id, state.deliveryId).catch(() => null);
             const status = out?.body?.status;
@@ -488,8 +501,8 @@ export function brainApi(brainDir: string, resultsDir: string): Plugin {
             if (out?.status === 200 && status === "interrupted" && state.attempts < MAX_ATTEMPTS && plan) {
               // O OpenBot cortou o turno no meio: manda de novo; o pedido reaproveita o que já existe.
               const connector = connectorInfo(appRoot, brain);
-              const order = writeTeamOrder(brain, plan, { command: connector.command, args: connector.args });
-              const again = await sendToAgent(state.builder.id, order.message, "fos-time-" + Date.now());
+              const message = state.mode === "conector" ? connectorOrder(connector) : writeTeamOrder(brain, plan, { command: connector.command, args: connector.args }).message;
+              const again = await sendToAgent(state.builder.id, message, "fos-time-" + Date.now());
               state = team.start({ id: state.builder.id, name: state.builder.name }, again.status === 202 ? (again.body?.deliveries?.[0]?.id ?? null) : null, true);
             } else if (out?.status === 200 && ["completed", "failed", "interrupted", "cancelled"].includes(status)) state = team.finish(status, out.body.answer ?? "", out.body.error ?? null);
             else pending = await pendingOf(state.builder.id).catch(() => pending);
