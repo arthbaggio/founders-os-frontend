@@ -4,25 +4,98 @@ O frontend do cérebro: o mapa do wiki em `../founders-os-brain`, com o design "
 
 ## Instalar com o Claude (o jeito mais fácil)
 
-Abra o [Claude Code](https://claude.com/claude-code) numa pasta vazia e cole o pedido abaixo. Ele confere o que você já tem e mostra o que falta, e só instala depois do seu ok.
+Abra o [Claude Code](https://claude.com/claude-code) numa pasta vazia (ou na pasta do app, se você já baixou) e cole o pedido abaixo. Ele confere o que você já tem, mostra o que falta e só instala depois do seu ok. Serve para Mac e Windows.
 
 ```text
-Quero instalar o Founders OS neste computador: https://github.com/arthbaggio/founders-os-frontend
+Quero instalar (ou atualizar) o Founders OS neste computador:
+https://github.com/arthbaggio/founders-os-frontend
+Siga o "Instalação passo a passo" do README. Em cada passo, me mostre o resultado.
 
 1. Antes de instalar qualquer coisa, confira o que já tenho e me diga a versão de cada um:
-   git, Node.js (o ideal é 22.5 ou mais novo; 20 funciona sem o histórico das conversas),
-   npm, o Claude Code logado (`claude auth status`) e o app OpenBot (https://openbot.run).
-2. Aproveite o que já está instalado. Para o que faltar, me mostre uma lista com o que vai
-   instalar, de onde (só sites oficiais) e o comando. Espere eu aprovar antes de instalar.
-3. Com tudo pronto: clone o repositório, rode `npm install` e `npm run dev` e me passe o
-   endereço (http://localhost:5178). Se já houver um cérebro na pasta `founders-os-brain`,
-   ao lado do app, ele abre o mapa; se não houver, o app abre a criação guiada do cérebro.
-4. No fim, me diga o próximo passo: no app, robô da barra de baixo › Configurar.
-   Lá ficam o Local scripts, o desenho do time, o Configurar tudo e o Dr. Eggbot.
+   git, Node.js (precisa ser 22.5 ou mais novo), npm, o Claude Code logado
+   (`claude auth status`) e o app OpenBot (https://openbot.run).
+2. Para o que faltar, me mostre o que vai instalar, de onde (só sites oficiais) e o comando.
+   Espere eu aprovar antes de instalar.
+3. Se a pasta do app já existe, rode `git checkout main` e `git pull origin main`. Se não
+   existe, clone o repositório. Depois rode `npm install`.
+4. Me pergunte onde está o meu cérebro. Se ele estiver em `founders-os-brain`, ao lado do
+   app, rode `npm run dev`; se estiver em outro lugar, `BRAIN_DIR=<pasta> npm run dev`.
+   Sem cérebro, o app abre a criação guiada.
+5. Abra http://localhost:5178/api/openbot/logo. Se aparecer o logo do OpenBot, o app achou
+   o OpenBot. Se der erro, siga "Se algo não aparecer" no README.
+6. No fim, me guie no app: robô da barra de baixo › Configurar › Ligar (Local scripts)
+   › Configurar tudo.
 
 Não mude nada fora da pasta do app e do cérebro, não faça commit e não peça senha
 nem chave de API no chat.
 ```
+
+## Instalação passo a passo
+
+Faça na ordem. Cada passo diz como conferir que deu certo antes de seguir.
+
+**1. Node.js 22.5 ou mais novo.** Baixe a versão LTS em https://nodejs.org. No terminal, `node -v` tem que mostrar `v22.5` ou maior. Com o Node 20 o app abre, mas não lê a conversa do OpenBot.
+
+**2. Claude Code logado.** Instale em https://claude.com/claude-code e rode `claude auth login` uma vez. `claude auth status` tem que mostrar a sua conta.
+
+**3. OpenBot instalado, aberto e com um agente.** Baixe em https://openbot.run e instale no lugar padrão:
+
+- Mac: arraste para a pasta **Aplicativos** (`/Applications`). O app só procura o OpenBot ali e em `~/Applications`.
+- Windows: rode o instalador sem trocar a pasta (fica em `%LOCALAPPDATA%\Programs\OpenBot`).
+
+Abra o OpenBot e deixe aberto. Não precisa criar nenhum agente: o app monta o time no passo 8.
+
+**4. O app.**
+
+```bash
+git clone https://github.com/arthbaggio/founders-os-frontend.git
+cd founders-os-frontend
+npm install
+```
+
+Se você já tinha baixado, entre na pasta e atualize em vez de clonar de novo: `git checkout main`, `git pull origin main` e `npm install`.
+
+**5. O cérebro.** O app lê uma pasta de cérebro: por padrão, `founders-os-brain` ao lado do app. Ele precisa ter:
+
+- `wiki/<área>/`: uma pasta por área (`wiki/vendas/`, `wiki/marketing/`…). **Cada pasta vira um agente.** A área `empresa` sempre existe.
+- `.claude/skills/<skill>/SKILL.md`: as skills. Para a skill ir para o agente certo, o `SKILL.md` precisa de `area: <pasta da área>` no topo (frontmatter). Sem isso, ela vai para a Empresa.
+
+Não tem cérebro? Rode o app sem ele e use a criação guiada, que monta essa estrutura.
+
+**6. Rodar.**
+
+```bash
+npm run dev                                  # cérebro em ../founders-os-brain
+BRAIN_DIR=/caminho/do/cerebro npm run dev    # cérebro em outra pasta (Mac)
+```
+
+No Windows (PowerShell), para outra pasta: `$env:BRAIN_DIR="C:\caminho\do\cerebro"; npm run dev`.
+
+Abra http://localhost:5178. Na barra de baixo, depois da linha vertical, tem que aparecer o **robô** (Agentes) ao lado do lápis.
+
+**7. Conferir o OpenBot.** Abra http://localhost:5178/api/openbot/logo. Tem que aparecer o logo do OpenBot. No painel do robô, o topo mostra "N no OpenBot" em vez de "OpenBot desconectado".
+
+**8. Montar o time.** Robô › **Configurar**:
+
+1. **Ligar** o Local scripts. O app pede para fechar e reabrir o OpenBot; aceite.
+2. **Configurar tudo.** Cria um agente por área, com as skills e rotinas dela e o conector do cérebro.
+   - **OpenBot sem nenhum agente** (instalação nova): o app gera o arquivo do time em Downloads e abre a pasta. No OpenBot, vá em **Server settings › Import**, escolha o arquivo e confirme. Quando os agentes aparecerem, o app liga o conector sozinho (deixe o painel Configurar aberto).
+   - **OpenBot que já tem agentes:** um deles monta o time direto. Leva alguns minutos. Aprove o que o OpenBot pedir.
+
+Pronto quando cada agente aparece na lista com o selo do OpenBot no canto.
+
+## Se algo não aparecer
+
+| O que você vê | O que fazer |
+|---|---|
+| Não tem o robô na barra de baixo (só o lápis depois da linha) | Você está numa versão antiga. Na pasta do app: `git checkout main`, `git pull origin main`, `npm install`. Pare o `npm run dev` (Ctrl+C), rode de novo e recarregue a página (Cmd+Shift+R ou Ctrl+Shift+R). |
+| `/api/openbot/logo` dá erro | O app não achou o OpenBot. No Mac, mova o OpenBot para `/Applications`. No Windows, reinstale na pasta padrão. |
+| "OpenBot desconectado" no painel | Abra o OpenBot. Sem nenhum agente, ele ainda não grava o endereço que o app lê; siga o passo 8 (Ligar e Configurar tudo), que cria o time pelo Import. O endereço fica em (`~/Library/Application Support/OpenBot/automation` no Mac, `%APPDATA%\OpenBot\automation` no Windows). |
+| Abriu a criação guiada em vez do mapa | O app não achou o cérebro. Rode com `BRAIN_DIR` apontando para a pasta dele. |
+| Só apareceu o agente Empresa, ou poucos agentes | O cérebro não tem pastas de área em `wiki/`. Crie uma pasta por área e rode o Configurar tudo de novo. |
+| Agente sem skills, ou todas as skills na Empresa | Falta `area:` no topo dos `SKILL.md`, ou o valor não bate com o nome da pasta da área. |
+| A conversa não mostra o histórico do OpenBot | O Node é mais antigo que 22.5. Atualize (passo 1). |
+| O Configurar tudo parou no meio | Rode de novo. O app tenta até 3 vezes; confira se o OpenBot está aberto e se há aprovações esperando. |
 
 ## Como rodar
 
@@ -103,12 +176,12 @@ O cérebro vira um time de agentes no [OpenBot](https://openbot.run/), que cada 
 
 ### Do zero, para quem baixou o repositório
 
-Precisa de: Node 22.5+ (para ler a conversa do OpenBot; com Node 20 funciona, mas o histórico fica só o daqui), o [Claude Code](https://claude.com/claude-code) logado (`claude auth login`) e o OpenBot instalado e aberto, com pelo menos um agente qualquer (o OpenBot pede um na primeira vez).
+Precisa de: Node 22.5+ (para ler a conversa do OpenBot; com Node 20 funciona, mas o histórico fica só o daqui), o [Claude Code](https://claude.com/claude-code) logado (`claude auth login`) e o OpenBot instalado e aberto. Não precisa ter nenhum agente nele.
 
 1. `npm install` e `npm run dev`, e abra http://localhost:5178.
 2. Sem cérebro, o app abre a criação guiada (abaixo). Com um cérebro, abre o mapa.
 3. Robô da barra de baixo › **Configurar** › **Desenhar**: o Claude lê o cérebro e escreve a missão, os gatilhos e os limites de cada agente. Os nomes e a divisão vêm das pastas, então o resultado é o mesmo em qualquer máquina.
-4. **Configurar o OpenBot** (no mesmo painel): **Ligar** o Local scripts e **Configurar tudo**. Um agente que já existe no OpenBot cria o time inteiro: os agentes, as skills, as rotinas e o conector do cérebro. O app acompanha e mostra as aprovações que o OpenBot pedir.
+4. **Configurar o OpenBot** (no mesmo painel): **Ligar** o Local scripts e **Configurar tudo**. Se o OpenBot já tem um agente, ele cria o time inteiro; se não tem nenhum, o app gera o arquivo do time para o **Server settings › Import** e, quando os agentes aparecem, um deles liga o conector. O time sai igual nos dois casos: os agentes, as skills, as rotinas e o conector do cérebro. O app acompanha e mostra as aprovações que o OpenBot pedir.
 5. Converse: o robô da barra abre os agentes à esquerda e a conversa à direita. No mapa, clique numa área e em **Conversar** para cair direto no agente dela.
 6. **Dr. Eggbot** (no mesmo painel, **Instalar**): o agente oficial do marketplace do OpenBot que cria agentes. Para um agente novo, converse com ele, explique o processo, e ele pergunta o que falta e cria o agente. Ele trabalha com acesso total (cria arquivos e roda comandos sem pedir a cada passo).
 
@@ -145,7 +218,7 @@ Tudo se atualiza sozinho. A atividade e as rotinas vêm do banco do OpenBot (Nod
 ### Configurar o OpenBot pelo front
 
 - **Local scripts em todos os agentes.** O OpenBot tem um padrão do servidor para isso (Server settings › Agent defaults), guardado em `<dados do servidor>/openbot-agent-defaults-v1.json` (`allowAutomation`). **Ligar** grava esse padrão, mantendo os outros e guardando uma cópia `.bak`. O OpenBot só lê o arquivo ao abrir, então, se ele estiver aberto, o app pergunta antes de fechar e reabrir (`server/openbotSetup.ts`).
-- **Configurar tudo** (`server/openbotTeam.ts`). O pedido completo vai num arquivo dentro do cérebro (`.openbot/montar-time.md`), porque uma mensagem da API tem no máximo 4.000 caracteres. Se o OpenBot cortar o turno no meio, o app manda de novo, até 3 vezes. Uma resposta sem o relatório final conta como falha.
+- **Configurar tudo** (`server/openbotTeam.ts`). A API local do OpenBot não cria agentes. Sem nenhum agente, o app gera o zip do importador oficial (o mesmo do **Levar**) e fica em `importar` até os agentes aparecerem; aí manda a um deles só o pedido do conector, que o zip não leva. Com um agente, manda o pedido completo. O pedido completo vai num arquivo dentro do cérebro (`.openbot/montar-time.md`), porque uma mensagem da API tem no máximo 4.000 caracteres. Se o OpenBot cortar o turno no meio, o app manda de novo, até 3 vezes. Uma resposta sem o relatório final conta como falha.
 - **Conector Segundo Cérebro** (`mcp/segundo-cerebro.mjs`, Node 18+, sem dependências): um servidor MCP local que dá aos agentes o cérebro ao vivo. As ferramentas são `visao_geral`, `buscar`, `ler_pagina`, `listar_skills`, `ler_skill`, `procurar_skill_parecida`, `salvar_skill` e `salvar_nota`. Ele lê o cérebro e só escreve notas em `fontes/notas/` e skills em `.claude/skills/`. **Regra de skill nova:** antes de salvar, o agente procura uma parecida; se houver, `salvar_skill` recusa e mostra qual, para ele editar a que existe (`editar: true`) em vez de duplicar. A skill vai para a área do agente (`area:` no frontmatter), e editar guarda a versão anterior em `.openbot/skills-anteriores/`. A regra também está nas instruções de todo agente. O Configurar tudo instala o conector; para instalar à mão, use Marketplace › Apps:
 
 ```

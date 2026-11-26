@@ -3,7 +3,12 @@
 // A API local do OpenBot não cria agentes, mas os próprios agentes dele têm as
 // ferramentas para isso (create_agent, create_skill, install_local_skill,
 // create_routine, save_mcp_server). Então o app escolhe um agente que já existe no
-// servidor (o OpenBot sempre pede um na instalação), manda o pedido e acompanha.
+// servidor, manda o pedido e acompanha.
+//
+// Sem nenhum agente no OpenBot, o app não pede que a pessoa crie um: gera o arquivo
+// do importador oficial (Server settings › Import), que cria os agentes, as skills e
+// as rotinas de uma vez. Quando os agentes aparecem, o app termina sozinho: manda a
+// um deles o pedido curto de ligar o conector do cérebro (status "importar").
 // Se o OpenBot pedir aprovação ou fizer uma pergunta, ela aparece no front, que
 // responde pela mesma API local.
 //
@@ -20,7 +25,11 @@ const DESCRIPTION_MAX = 2000;
 const cut = (text: string, max: number) => (text.length > max ? text.slice(0, max - 1).trimEnd() + "…" : text);
 
 export type TeamBuild = {
-  status: "nenhum" | "rodando" | "pronto" | "falhou";
+  status: "nenhum" | "importar" | "rodando" | "pronto" | "falhou";
+  // "time": o pedido completo; "conector": só o conector, depois da importação.
+  mode: "time" | "conector";
+  // O arquivo de importação gerado, enquanto espera a pessoa importar no OpenBot.
+  file: string | null;
   builder: { id: string; name: string } | null;
   deliveryId: string | null;
   startedAt: string | null;
@@ -34,7 +43,7 @@ export type TeamBuild = {
 };
 
 export const MAX_ATTEMPTS = 3;
-const EMPTY: TeamBuild = { status: "nenhum", builder: null, deliveryId: null, startedAt: null, endedAt: null, answer: "", report: null, attempts: 0 };
+const EMPTY: TeamBuild = { status: "nenhum", mode: "time", file: null, builder: null, deliveryId: null, startedAt: null, endedAt: null, answer: "", report: null, attempts: 0 };
 
 // O agente que monta o time: um que já existe e não faz parte do time desenhado.
 export function pickBuilder(agents: OpenBotAgent[], plan: Plan): OpenBotAgent | null {
@@ -42,6 +51,20 @@ export function pickBuilder(agents: OpenBotAgent[], plan: Plan): OpenBotAgent | 
   const free = agents.filter((one) => !team.has(one.name.toLowerCase()));
   // O Dr. Eggbot foi feito para criar agentes: quando ele existe, é ele quem monta.
   return findEggbot(free) ?? free[0] ?? agents[0] ?? null;
+}
+
+// Depois da importação os agentes, as skills e as rotinas já existem: falta só o
+// conector, que o arquivo de importação não leva. Cabe numa mensagem.
+export function connectorOrder(connector: { command: string; args: string[] }) {
+  return [
+    "Pedido explícito do dono deste OpenBot, feito no Founders OS. O time acabou de ser importado; falta só o conector do cérebro.",
+    "Se ainda não existir um servidor MCP chamado `segundo-cerebro`, crie com `save_mcp_server` exatamente assim:",
+    "```json",
+    JSON.stringify({ name: "segundo-cerebro", transport: "stdio", command: connector.command, args: connector.args, enabled: true }, null, 2),
+    "```",
+    "Não crie agentes, skills nem rotinas. No fim, responda SÓ com um bloco ```json:",
+    '{"criados": [], "skills": 0, "rotinas": 0, "conector": true/false, "falhas": ["o que falhou e por quê"]}',
+  ].join("\n");
 }
 
 // O pedido completo, em Markdown, com tudo que o agente precisa (nada a adivinhar).
@@ -132,9 +155,15 @@ export function teamStore(brain: string, results: string) {
   return {
     state: () => state,
     // retry: a mesma montagem, mandada de novo depois de uma interrupção.
-    start(builder: OpenBotAgent, deliveryId: string | null, retry = false) {
+    // Sem agente no OpenBot: o arquivo de importação está pronto e espera a pessoa importar.
+    waitImport(file: string) {
+      state = { ...EMPTY, status: "importar", file, startedAt: new Date().toISOString() };
+      save();
+      return state;
+    },
+    start(builder: OpenBotAgent, deliveryId: string | null, retry = false, mode: TeamBuild["mode"] = state.mode) {
       const attempts = retry ? state.attempts + 1 : 1;
-      state = { ...EMPTY, status: deliveryId ? "rodando" : "falhou", builder: { id: builder.id, name: builder.name }, deliveryId, startedAt: retry && state.startedAt ? state.startedAt : new Date().toISOString(), answer: deliveryId ? "" : "O OpenBot não devolveu a entrega.", attempts };
+      state = { ...EMPTY, mode, status: deliveryId ? "rodando" : "falhou", builder: { id: builder.id, name: builder.name }, deliveryId, startedAt: retry && state.startedAt ? state.startedAt : new Date().toISOString(), answer: deliveryId ? "" : "O OpenBot não devolveu a entrega.", attempts };
       save();
       return state;
     },
